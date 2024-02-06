@@ -1,0 +1,96 @@
+mql5
+//+------------------------------------------------------------------+
+//|                              VWAP With Alerts                    |
+//|                         Developer: forexroboteasy.com             |
+//|                         Development: Forex Robot Easy Team        |
+//|                                                                  |
+//| This code calculates VWAP and generates alerts when price crosses |
+//| the VWAP line, indicating potential trading opportunities.        |
+//+------------------------------------------------------------------+
+
+#property copyright 'forexroboteasy.com'
+#property link      'http://www.forexroboteasy.com'
+
+//+------------------------------------------------------------------+
+//|                            Indicator inputs                       |
+//+------------------------------------------------------------------+
+input int period = 20; // VWAP period
+input int deviation = 2; // Deviation for alerts
+
+//+------------------------------------------------------------------+
+//|                       Global variables                            |
+//+------------------------------------------------------------------+
+double vwapBuffer[]; // VWAP buffer
+double lastVwap = 0; // Last calculated VWAP
+bool alertGenerated = false; // Flag to track alert generation
+
+//+------------------------------------------------------------------+
+//|                          Custom indicator initialization function |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+   // Set indicator buffers
+   SetIndexBuffer(0, vwapBuffer);
+   ArrayInitialize(vwapBuffer, 0);
+
+   // Set indicator label
+   IndicatorSetString(INDICATOR_SHORTNAME, 'VWAP With Alerts');
+
+   return(INIT_SUCCEEDED);
+}
+
+//+------------------------------------------------------------------+
+//|                      Custom indicator calculation function        |
+//+------------------------------------------------------------------+
+int OnCalculate(const int rates_total,
+                const int prev_calculated,
+                const datetime &time[],
+                const double &open[],
+                const double &high[],
+                const double &low[],
+                const double &close[],
+                const long &tick_volume[],
+                const long &volume[],
+                const int &spread[])
+{
+   int limit = rates_total - prev_calculated;
+
+   // Calculate VWAP
+   for(int i = 0; i < limit; i++)
+   {
+      double sum = 0;
+      double volumeSum = 0;
+
+      for(int j = i; j < i + period; j++)
+      {
+         sum += close[j] * volume[j];
+         volumeSum += volume[j];
+      }
+
+      vwapBuffer[i] = sum / volumeSum;
+   }
+
+   // Check for alert
+   if(close[0] > vwapBuffer[0] + deviation && close[1] < vwapBuffer[1] + deviation)
+   {
+      if(!alertGenerated)
+      {
+         Alert('Price crossed above VWAP');
+         alertGenerated = true;
+      }
+   }
+   else if(close[0] < vwapBuffer[0] - deviation && close[1] > vwapBuffer[1] - deviation)
+   {
+      if(!alertGenerated)
+      {
+         Alert('Price crossed below VWAP');
+         alertGenerated = true;
+      }
+   }
+   else
+   {
+      alertGenerated = false;
+   }
+
+   return(rates_total);
+}
